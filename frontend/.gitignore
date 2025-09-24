@@ -1,0 +1,51 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===================== 新增：敏感配置文件 =====================
+.env
+.env.*
+!.env.example
+config.js
+config.json
+*.key
+
+# ===================== 新增：后端（Python/FastAPI）相关 =====================
+venv/
+env/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.db.bak
+
+# ===================== 新增：项目特定产物 =====================
+uploads/
+detect_results.json
+*.tmp
+*.manifest
+*.appcache
+test-images/

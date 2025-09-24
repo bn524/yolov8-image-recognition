@@ -1,0 +1,9 @@
+Collecting onnx
+  Using cached onnx-1.19.0-cp310-cp310-win_amd64.whl.metadata (7.2 kB)
+Requirement already satisfied: numpy>=1.22 in c:\users\bob123\.conda\envs\yolo-frontend\lib\site-packages (from onnx) (2.2.6)
+Collecting protobuf>=4.25.1 (from onnx)
+  Using cached protobuf-6.32.1-cp310-abi3-win_amd64.whl.metadata (593 bytes)
+Requirement already satisfied: typing_extensions>=4.7.1 in c:\users\bob123\.conda\envs\yolo-frontend\lib\site-packages (from onnx) (4.15.0)
+Collecting ml_dtypes (from onnx)
+  Using cached ml_dtypes-0.5.3-cp310-cp310-win_amd64.whl.metadata (9.2 kB)
+Downloading onnx-1.19.0-cp310-cp310-win_amd64.whl (16.5 MB)
