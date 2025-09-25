@@ -14,5 +14,9 @@ export default defineConfig({
         timeout: 60000
       }
     }
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets'
   }
 })

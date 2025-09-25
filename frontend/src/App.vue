@@ -9,7 +9,7 @@
           </div>
           <nav class="nav-links">
             <a href="#" @click.prevent="scrollToTop"><i class="fas fa-home"></i> 首页</a>
-            <a href="https://github.com/ultralytics/yolov5" target="_blank"><i class="fas fa-info-circle"></i> 关于</a>
+            <a href="https://docs.ultralytics.com/zh/models/yolov8/" target="_blank"><i class="fas fa-info-circle"></i> 关于</a>
             <a href="#" @click.prevent="showContactModal = true"><i class="fas fa-envelope"></i> 联系</a>
           </nav>
         </div>
