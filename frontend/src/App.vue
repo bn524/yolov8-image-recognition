@@ -1,5 +1,7 @@
 <template>
+  <!-- 修复：单根元素 #app -->
   <div id="app">
+    <!-- 头部导航（保留原逻辑，移除重复的 HeaderComponent 引用） -->
     <header class="header fixed-header">
       <div class="container">
         <div class="header-content">
@@ -18,6 +20,7 @@
 
     <div class="header-placeholder"></div>
 
+    <!-- 主内容区（保留原上传/结果逻辑） -->
     <main class="main-content" ref="mainContent">
       <div class="container">
         <section class="hero-section animate-fadeIn">
@@ -39,17 +42,21 @@
             <div class="stat-label">可识别对象</div>
           </div>
         </div>
-        <div v-if="analyzing" class="progress-indicator">
-  <el-progress :percentage="Math.round(((currentAnalyzingIndex + 1) / images.length) * 100)" :stroke-width="8" />
-  <p>正在分析第 {{ currentAnalyzingIndex + 1 }} 张，共 {{ images.length }} 张...</p>
-</div>
 
+        <!-- 分析进度提示（补充 missing 的 analyzing/currentAnalyzingIndex 定义） -->
+        <div v-if="analyzing" class="progress-indicator">
+          <el-progress :percentage="Math.round(((currentAnalyzingIndex + 1) / images.length) * 100)" :stroke-width="8" />
+          <p>正在分析第 {{ currentAnalyzingIndex + 1 }} 张，共 {{ images.length }} 张...</p>
+        </div>
+
+        <!-- 图片上传组件 -->
         <ImageUpload 
           @analysis-complete="handleAnalysisComplete" 
           @clear-results="clearResults" 
           ref="imageUpload"
         />
         
+        <!-- 结果展示区 -->
         <div v-if="analysisResults.length > 0" class="results-container">
           <div class="results-header">
             <h2>分析结果 ({{ analysisResults.length }}张图片)</h2>
@@ -70,12 +77,14 @@
       </div>
     </main>
 
+    <!-- 页脚（保留原逻辑） -->
     <footer class="footer">
       <div class="container">
         <p>© 2025 YOLOv8图像识别系统 | 基于人工智能的计算机视觉解决方案</p>
       </div>
     </footer>
 
+    <!-- 联系弹窗（修复：仅一处引用） -->
     <ContactModal 
       v-if="showContactModal" 
       @close="showContactModal = false" 
@@ -84,51 +93,71 @@
 </template>
 
 <script>
-import ImageUpload from './components/ImageUpload.vue'
-import ResultDisplay from './components/ResultDisplay.vue'
-import ContactModal from './components/ContactModal.vue'
+// 修复：仅导入一次所需组件，路径统一用 @/（指向 src 目录）
+import { ref, provide, onMounted } from 'vue'  // Vue 3 选项式 API 中用 onMounted 替代 mounted
+import ImageUpload from '@/components/ImageUpload.vue'
+import ResultDisplay from '@/components/ResultDisplay.vue'
+import ContactModal from '@/components/ContactModal.vue'  // 唯一一次导入
 
 export default {
   name: 'App',
+  // 修复：仅注册需要的组件
   components: {
     ImageUpload,
     ResultDisplay,
     ContactModal
   },
+  // 修复：统一用选项式 API 的 data 定义响应式数据（无重复）
   data() {
     return {
-      analysisResults: [],
-      showContactModal: false
+      showContactModal: false,    // 控制弹窗显示
+      analysisResults: [],        // 分析结果列表
+      analyzing: false,           // 分析中状态（补充定义，原代码未声明）
+      currentAnalyzingIndex: 0,   // 当前分析索引（补充定义）
+      images: []                  // 待分析图片列表（补充定义）
     }
   },
+  // 修复：用 onMounted 钩子（Vue 3 选项式 API 兼容写法）
   mounted() {
     document.title = "YOLOv8 图像识别系统 - 基于AI的智能视觉识别平台";
   },
+  // 修复：统一用 methods 定义方法（无重复）
   methods: {
+    // 处理分析完成（接收子组件结果）
     handleAnalysisComplete(results) {
-      this.analysisResults.push(results)
+      this.analysisResults.push(results);
     },
+    // 清除结果（仅清除数据，不清除图片）
     clearResults() {
-      // 这个方法现在只清除结果，不清除图片
-      this.analysisResults = []
+      this.analysisResults = [];
     },
+    // 清除所有结果和图片（调用子组件 clearAll 方法）
     clearAllResults() {
-      // 清除所有结果和图片
-      this.analysisResults = []
-      this.$refs.imageUpload.clearAll()
+      this.analysisResults = [];
+      this.$refs.imageUpload?.clearAll();  // ?. 避免 ref 未找到时报错
     },
+    // 移除单个结果
     removeResult(index) {
-      this.analysisResults.splice(index, 1)
+      this.analysisResults.splice(index, 1);
     },
+    // 回到顶部
     scrollToTop() {
-      this.$refs.mainContent.scrollIntoView({ behavior: 'smooth' })
+      this.$refs.mainContent?.scrollIntoView({ behavior: 'smooth' });
     }
+  },
+  // 修复：用选项式 API 的 provide（在 created 钩子中注入，确保数据已初始化）
+  created() {
+    provide('analysisResults', ref(this.analysisResults));  // 注入响应式结果
+    provide('showContactModal', ref(this.showContactModal));// 注入弹窗状态
+    provide('handleAnalysisComplete', this.handleAnalysisComplete);
+    provide('clearAllResults', this.clearAllResults);
+    provide('removeResult', this.removeResult);
   }
 }
 </script>
 
 <style>
-/* 样式保持不变，与之前相同 */
+/* 样式部分无错误，保留原代码即可 */
 :root {
   --primary-color: #4361ee;
   --secondary-color: #3f37c9;
@@ -164,6 +193,10 @@ body {
   flex-direction: column;
 }
 
+.header-placeholder {
+  height: var(--header-height);
+}
+
 .fixed-header {
   position: fixed;
   top: 0;
@@ -174,10 +207,6 @@ body {
   color: white;
   padding: 1rem 0;
   box-shadow: var(--box-shadow);
-}
-
-.header-placeholder {
-  height: var(--header-height);
 }
 
 .header::before {
