@@ -21,10 +21,6 @@ COPY --from=builder /usr/local/lib/python3.10/site-packages/ /usr/local/lib/pyth
 COPY main.py .                 
 COPY models/ ./models/        
 COPY api/ ./api/              
-COPY utils/ ./utils/       
-
-# 启动命令：先下载YOLOv8模型（用n版，体积最小，适合部署），再启动服务
-# 模型链接可替换：n(小)→s→m→l→x(大)，根据需求选择
 CMD ["sh", "-c", \
      "wget https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt -O yolov8n.pt && \
       python main.py"]
