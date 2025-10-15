@@ -14,14 +14,23 @@ import json
 from typing import List, Dict, Any
 import os
 import uuid
+from contextlib import asynccontextmanager
+import tempfile
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Railway 环境变量配置
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./detections.db")
+PORT = int(os.environ.get("PORT", 8000))
+
+# 如果是 Railway 的 PostgreSQL 数据库，需要调整连接字符串
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 # 数据库配置
-SQLALCHEMY_DATABASE_URL = "sqlite:///./detections.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -49,32 +58,51 @@ def get_db():
     finally:
         db.close()
 
+# 生命周期管理
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时执行
+    logger.info("🚀 YOLOv8 API 服务启动中...")
+    
+    # 确保缩略图目录存在
+    os.makedirs(THUMBNAIL_DIR, exist_ok=True)
+    
+    # 预加载模型
+    global model
+    try:
+        model = YOLO("yolov8n.pt")
+        logger.info("✅ YOLOv8模型加载成功")
+    except Exception as e:
+        logger.error(f"❌ 模型加载失败: {e}")
+        raise e
+    
+    yield  # 应用运行期间
+    
+    # 关闭时执行
+    logger.info("🛑 服务关闭中...")
+
 app = FastAPI(
     title="YOLOv8图像识别API",
     description="基于YOLOv8的智能图像识别后端服务",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS配置 - 允许所有前端应用访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应该限制具体域名
+    allow_origins=["*"],  # Railway 部署允许所有来源
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 创建缩略图目录
-THUMBNAIL_DIR = "thumbnails"
+# 使用临时目录存储缩略图（Railway 的持久化存储有限）
+THUMBNAIL_DIR = os.path.join(tempfile.gettempdir(), "yolo_thumbnails")
 os.makedirs(THUMBNAIL_DIR, exist_ok=True)
 
-# 加载YOLOv8模型
-try:
-    model = YOLO("yolov8n.pt")
-    logger.info("YOLOv8模型加载成功")
-except Exception as e:
-    logger.error(f"模型加载失败: {e}")
-    raise e
+# 全局模型变量
+model = None
 
 @app.get("/")
 async def root():
@@ -83,17 +111,51 @@ async def root():
         "status": "success", 
         "message": "YOLOv8图像识别服务运行正常",
         "version": "2.0.0",
-        "model": "yolov8n"
+        "model": "yolov8n",
+        "environment": "production" if DATABASE_URL != "sqlite:///./detections.db" else "development"
     }
+
+@app.get("/health")
+async def health_check():
+    """更详细的健康检查"""
+    try:
+        # 测试数据库连接
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        db.close()
+        
+        # 测试模型
+        if model is None:
+            return JSONResponse(
+                status_code=503,
+                content={"status": "error", "message": "模型未加载"}
+            )
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "model": "loaded",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"健康检查失败: {e}")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "error": str(e)}
+        )
 
 @app.get("/model/info")
 async def get_model_info():
     """获取模型信息"""
+    if model is None:
+        raise HTTPException(status_code=503, detail="模型未加载")
+    
     return {
         "model_name": "yolov8n",
         "classes": list(model.names.values()),
         "input_size": (640, 640),
-        "version": "8.0.0"
+        "version": "8.0.0",
+        "class_count": len(model.names)
     }
 
 def create_thumbnail(image, filename, max_size=(200, 200)):
@@ -106,7 +168,7 @@ def create_thumbnail(image, filename, max_size=(200, 200)):
         
         # 计算缩放比例
         h, w = image.shape[:2]
-        scale = min(max_size[0] / w, max_size[1] / h, 1.0)  # 限制最大缩放不超过原图
+        scale = min(max_size[0] / w, max_size[1] / h, 1.0)
         new_w, new_h = int(w * scale), int(h * scale)
         
         # 缩放图像
@@ -134,6 +196,9 @@ async def detect_objects(
     - 支持格式: JPEG, PNG
     - 最大文件大小: 10MB
     """
+    if model is None:
+        raise HTTPException(status_code=503, detail="模型服务暂不可用")
+    
     # 验证文件类型
     allowed_types = ["image/jpeg", "image/png", "image/jpg"]
     if file.content_type not in allowed_types:
@@ -209,7 +274,7 @@ async def detect_objects(
 @app.get("/detections")
 async def get_detection_history(
     skip: int = 0,
-    limit: int = 50,
+    limit: int = 20,  # Railway 内存有限，减少默认返回数量
     db: Session = Depends(get_db)
 ):
     """获取检测历史记录"""
@@ -313,7 +378,7 @@ async def get_service_stats(db: Session = Depends(get_db)):
             "total_detections": total_detections,  # 总检测次数
             "total_objects": int(total_objects),   # 总检测对象数量
             "today_detections": today_detections,  # 今日检测次数
-            "detection_categories": len(model.names)
+            "detection_categories": len(model.names) if model else 0
         }
     except Exception as e:
         logger.error(f"获取统计信息失败: {str(e)}")
@@ -327,10 +392,12 @@ async def get_thumbnail(filename: str):
         raise HTTPException(status_code=404, detail="缩略图不存在")
     return FileResponse(thumbnail_path)
 
+# Railway 特定启动方式
 if __name__ == "__main__":
     uvicorn.run(
-        app, 
+        "main:app",  # 修改为模块引用方式
         host="0.0.0.0", 
-        port=8000,
-        log_level="info"
+        port=PORT,
+        log_level="info",
+        reload=False  # 生产环境关闭热重载
     )
