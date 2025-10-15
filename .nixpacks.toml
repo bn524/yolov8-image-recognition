@@ -1,0 +1,10 @@
+# 核心作用：让Railway跳过前端文件，只构建后端
+[build]
+# 忽略前端相关文件，减少构建时的文件扫描和误判
+ignore = ["frontend","docs","images","vue-codemod","README.md","LICENSE",]
+# 强制用清华源安装依赖，比默认快3倍
+buildCommand = "pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple"
+
+# 明确启动命令，避免Railway猜启动文件
+[start]
+command = "python main.py"
