@@ -20,8 +20,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.log
-*.pt                # YOLO模型文件（启动时动态下载，不打包进镜像）
-
 # ========== 版本控制/IDE冗余 ==========
 .git/
 .gitignore

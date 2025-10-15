@@ -19,7 +19,4 @@ COPY --from=builder /usr/local/lib/python3.10/site-packages/ /usr/local/lib/pyth
 # 复制后端核心代码（只复制后端文件，前端已被.dockerignore排除）
 # 如果你有其他后端文件夹（如routes/、utils/），按此格式添加
 COPY backend/main.py .                                   
-CMD ["sh", "-c", \
-     "wget https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt -O yolov8n.pt && \
-      python main.py"]
-    
+CMD ["python", "app.py"]
