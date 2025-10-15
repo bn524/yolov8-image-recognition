@@ -1,43 +1,41 @@
-# -------------- 前端相关（必排除，占空间最大）--------------
-# Vue3前端文件夹（根据你的实际文件夹名修改，比如"vue-frontend"）
-frontend/
-# 后台管理系统文件夹（根据你的实际文件夹名修改，比如"admin-panel"）
-admin/
-# 前端依赖（几GB起步，完全用不到后端部署）
-node_modules/
-# 前端打包产物（后端部署不需要）
-dist/
-# 前端配置文件
+# ========== 前端全量排除（后端部署不需要前端源码/依赖） ==========
+frontend/           # 整个前端源码文件夹（后端部署用不到，直接排除）
+my-vue-admin/       # 额外的前端/后台管理文件夹（同理排除）
+node_modules/       # 防止其他位置的前端依赖残留，兜底排除
+dist/               # 前端打包产物（后端不需要）
+public/             # 前端静态资源（后端不需要）
+src/                # 前端源码（后端不需要）
 package.json
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
-# 前端静态资源（图片、视频等，后端用不到）
-public/
-assets/
+.env.development
+.env.production
+index.html
+vite.config.js
 
-# -------------- 后端临时文件 --------------
-# Python虚拟环境（本地开发用，部署不需要）
-venv/
-# 编译缓存
+# ========== 后端无关文件 ==========
+venv/               # Python虚拟环境（本地开发用，部署不需要）
 __pycache__/
 *.pyc
 *.pyo
-# 日志文件
 *.log
-# YOLOv8模型文件（启动时动态下载，不打包进镜像）
-*.pt
-*.pth
+*.pt                # YOLO模型文件（启动时动态下载，不打包进镜像）
 
-# -------------- 其他冗余文件 --------------
-# Git版本控制文件
+# ========== 版本控制/IDE冗余 ==========
 .git/
 .gitignore
-# IDE配置文件（如VSCode、PyCharm）
 .idea/
 .vscode/
-*.swp
-*.swo
-# 操作系统临时文件
 .DS_Store
 Thumbs.db
+
+# ========== 其他项目冗余 ==========
+docs/
+images/
+vue-codemod/
+.npmrc.toml
+LICENSE
+railway.json
+README.md
+runtime.txt         # 若需指定Python版本则保留，否则排除
